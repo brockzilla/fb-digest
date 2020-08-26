@@ -55,6 +55,15 @@ def _extract_date(item):
     return timestamp
 
 
+# Original Poster (for items that were re-shared)
+def _extract_op(item):
+    attribution = item.find_all(class_ = "_5pcm")
+    op = ""
+    for link in attribution:
+        op = link.find('a').getText()
+    return op
+
+
 def _extract_link(item):
     postLinks = item.find_all(class_ = "_6ks")
     link = ""
@@ -92,6 +101,7 @@ def _extract_html(raw_data):
     for item in k:
         post = dict()
         post['Poster'] = _extract_poster(item)
+        post['OriginalPoster'] = _extract_op(item)
         post['Post'] = _extract_post_text(item)
         post['Date'] = _extract_date(item)
         post['Link'] = _extract_link(item)
@@ -215,6 +225,7 @@ if __name__ == "__main__":
 
             for i in range(len(posts)):
                 poster = posts[i]['Poster']
+                originalPoster = posts[i]['OriginalPoster']
                 post = posts[i]['Post']
                 linkURL = posts[i]['Link']
                 postURL = posts[i]['PostId']
@@ -224,7 +235,7 @@ if __name__ == "__main__":
                 # We only want content they've:
                 # 1. posted themself
                 # 2. posted this week
-                # 3. posted with text or without a shared link
+                # 3. posted with a comment or without a shared link
 
                 postTime = float(date)
                 currentTime = time.time()
@@ -233,19 +244,20 @@ if __name__ == "__main__":
                 isRecent = (currentTime - postTime <= secondsInAWeek)
 
                 isSelfPosted = (friendName == poster)
+                hasOP = ((not originalPoster is None) & (originalPoster != ''))
                 hasPostContent = ((not post is None) & (post != ''))
                 hasLink = ((not linkURL is None) & (linkURL != ''))
                 hasImage = ((not imageURL is None) & (imageURL != ''))
                 hasElligiblePost = False
 
-                if (isSelfPosted & isRecent & (hasPostContent | (not hasLink))):
+                if (isSelfPosted & isRecent & (hasPostContent | ((not hasLink) & (not hasOP)))):
 
                     content += "<p>"
                     content += "<strong>" + friendName + "</strong><br> (" + prettyTime + ")<br>"
                     if hasPostContent:
                         content += post + "<br>"
                     if hasImage:
-                        content += "<img src='" + imageURL + "'><br>"
+                        content += "<img src='" + imageURL + "' style='width: 100%; max-width: 800px; margin: 10px 0;'><br>"
                     content += "<a href='" + postURL + "'>View Post</a>"
                     if hasLink:
                         content += " | <a href='" + linkURL + "'>Shared Link</a>"
