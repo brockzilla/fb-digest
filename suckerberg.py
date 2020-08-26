@@ -181,6 +181,7 @@ if __name__ == "__main__":
     print("--------------------------------------------")
 
     option = Options()
+    option.add_argument('headless')
     option.add_argument("start-maximized")
     option.add_argument("--disable-infobars")
     option.add_argument("--disable-extensions")
