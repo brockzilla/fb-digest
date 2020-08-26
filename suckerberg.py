@@ -76,7 +76,11 @@ def _extract_post_id(item):
     postIds = item.find_all(class_="_5pcq")
     post_id = ""
     for postId in postIds:
-        post_id = f"https://www.facebook.com{postId.get('href')}"
+        if ("http" in postId.get('href')):
+            post_id = postId.get('href')
+        else:
+            post_id = f"https://www.facebook.com{postId.get('href')}"
+        break
     return post_id
 
 
@@ -253,11 +257,11 @@ if __name__ == "__main__":
                 if (isSelfPosted & isRecent & (hasPostContent | ((not hasLink) & (not hasOP)))):
 
                     content += "<p>"
-                    content += "<strong>" + friendName + "</strong><br> (" + prettyTime + ")<br>"
+                    content += "<h3>" + friendName + "</h3 style='margin-bottom: 0;'> (" + prettyTime + ")<br>"
                     if hasPostContent:
                         content += post + "<br>"
                     if hasImage:
-                        content += "<img src='" + imageURL + "' style='width: 100%; max-width: 800px; margin: 10px 0;'><br>"
+                        content += "<img src='" + imageURL + "' style='width: 100%; max-width: 480px; margin-top: 10px;'><br>"
                     content += "<a href='" + postURL + "'>View Post</a>"
                     if hasLink:
                         content += " | <a href='" + linkURL + "'>Shared Link</a>"
