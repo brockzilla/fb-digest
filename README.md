@@ -14,7 +14,9 @@ Use this script to log in, scrape recent posts from your friends' profiles and s
 
 ## Configuration
 
-You'll need to create and tweak the script to reference your configuration secrets via a JSON file: `fb-digest-secrets.json`:
+You'll need to create two files for the script to reference.
+
+A JSON file capturing a few settings:
 
 ```
 {
@@ -29,7 +31,7 @@ You'll need to create and tweak the script to reference your configuration secre
 }
 ```
 
-Then, you'll need to create and reference a two-column CSV file identifying the profiles you'll be tracking: `friends.csv`
+And a two-column CSV file identifying the profiles you'll be tracking (Friend Facebook ID, Friend Name):
 
 ```
 emmett.fitz-hume,Emmett Fitz-Hume
@@ -38,7 +40,7 @@ pierre.lemonjello.1,Pierre Lemonjello
 ...
 ```
 
-Sure, it would be convenient to automatically pull in all of your friends from your profile, but do you really care about all of them? 
+Sure, it would be convenient to automatically pull in all of your friends from your profile, but do you really care about _all_ of them? 
 
 #### Additional Notes
 
