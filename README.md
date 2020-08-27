@@ -18,16 +18,14 @@ You'll need to create and tweak the script to reference your configuration secre
 
 ```
 {
-    "secrets" : {
-        "facebookUsername" : "[VALUE]",
-        "facebookPassword" : "[VALUE]",
-        "senderEmailAddress" : "[VALUE]",
-        "recipientEmailAddress" : "[VALUE]",
-        "mailserverHost" : "[VALUE]",
-        "mailserverPort" : "[VALUE]",
-        "mailserverUsername" : "[VALUE]",
-        "mailserverPassword" : "[VALUE]"
-    }
+    "facebookUsername" : "[VALUE]",
+    "facebookPassword" : "[VALUE]",
+    "senderEmailAddress" : "[VALUE]",
+    "recipientEmailAddress" : "[VALUE]",
+    "mailserverHost" : "[VALUE]",
+    "mailserverPort" : "[VALUE]",
+    "mailserverUsername" : "[VALUE]",
+    "mailserverPassword" : "[VALUE]"
 }
 ```
 
@@ -46,9 +44,11 @@ Sure, it would be convenient to automatically pull in all of your friends from y
 
 The script is configured with a number of personal preferences that should to tuned. It's written to be run weekly, and to examine only the last three posts on each friend's profile. It filters out posts that weren't created by the friend (ie. mentions don't count) and posts that includes a link without commentary (since those are often less meaningful). Filtering out posts that contain certain keywords could also be useful.
 
+Parsing is configured to work with the Classic Facebook UI -- it does not yet support the new UI.
+
 ## Usage
 
-```python3 suckerberg.py```
+```python3 suckerberg.py -config configuration.json -friends friends.csv```
 
 Cron it up, then sit back and enjoy all the smugness of [#DeleteFacebook](https://knowyourmeme.com/memes/events/deletefacebook) without the [FOMO](https://www.urbandictionary.com/define.php?term=Fomo).
 
