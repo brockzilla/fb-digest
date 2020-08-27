@@ -1,26 +1,25 @@
-import argparse
 import os
 import time
 import json
 import csv
 import emails
 import random
+import argparse
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup as parser
 
-# Pull in configuration details (see README.md for format)
-with open('../secrets/fb-digest-secrets.json') as file:
-    data = json.load(file)
-    FACEBOOK_USERNAME = data["secrets"]["facebookUsername"]
-    FACEBOOK_PASSWORD = data["secrets"]["facebookPassword"]
-    EMAIL_FROM_ADDRESS = data["secrets"]["senderEmailAddress"]
-    EMAIL_TO_ADDRESS = data["secrets"]["recipientEmailAddress"]
-    EMAIL_HOST = data["secrets"]["mailserverHost"]
-    EMAIL_PORT = data["secrets"]["mailserverPort"]
-    EMAIL_USERNAME = data["secrets"]["mailserverUsername"]
-    EMAIL_PASSWORD = data["secrets"]["mailserverPassword"]
+# Receive a noise-free email digest containing most recent content posted to Facebook by your friends.
+# https://github.com/brockzilla/fb-digest
+
+def _login(browser, email, password):
+    browser.get("http://facebook.com")
+    browser.maximize_window()
+    browser.find_element_by_name("email").send_keys(email)
+    browser.find_element_by_name("pass").send_keys(password)
+    browser.find_element_by_name('login').click()
+    time.sleep(5)
 
 
 def _extract_post_text(item):
@@ -119,23 +118,14 @@ def _extract_html(raw_data):
     return posts
 
 
-def _login(browser, email, password):
-    browser.get("http://facebook.com")
-    browser.maximize_window()
-    browser.find_element_by_name("email").send_keys(email)
-    browser.find_element_by_name("pass").send_keys(password)
-    browser.find_element_by_name('login').click()
-    time.sleep(5)
-
-
-def _count_needed_scrolls(browser, infiniteScroll, numOfPost):
+def _count_needed_scrolls(browser, infiniteScroll, numberOfPosts):
     if infiniteScroll:
         lenOfPage = browser.execute_script(
             "window.scrollTo(0, document.body.scrollHeight);var lenOfPage=document.body.scrollHeight;return lenOfPage;"
         )
     else:
         # Roughly 8 post per scroll
-        lenOfPage = int(numOfPost / 8)
+        lenOfPage = int(numberOfPosts / 8)
     return lenOfPage
 
 
@@ -171,11 +161,11 @@ def writeJSON(posts, outputFile):
             file.write(json.dumps(post))
 
 
-def extract(browser, page, numOfPost):
+def extract(browser, page, numberOfPosts):
 
     browser.get(page)
 
-    lenOfPage = _count_needed_scrolls(browser, False, numOfPost)
+    lenOfPage = _count_needed_scrolls(browser, False, numberOfPosts)
     _scroll(browser, False, lenOfPage)
 
     # Now that the page is fully scrolled, grab the source code
@@ -189,6 +179,28 @@ def extract(browser, page, numOfPost):
 
 
 if __name__ == "__main__":
+    argParser = argparse.ArgumentParser(description="FB Digest")
+    required_parser = argParser.add_argument_group("required arguments")
+    required_parser.add_argument('-config', help="A JSON file containing various details and secrets", required=True)
+    required_parser.add_argument('-friends', help="A CSV file containing the Facebook pages you want to scrape", required=True)
+    args = argParser.parse_args()
+
+    # Pull in configuration details (see README.md for format)
+    with open(args.config) as configFile:
+        secrets = json.load(configFile)
+        FACEBOOK_USERNAME = secrets["facebookUsername"]
+        FACEBOOK_PASSWORD = secrets["facebookPassword"]
+        EMAIL_FROM_ADDRESS = secrets["senderEmailAddress"]
+        EMAIL_TO_ADDRESS = secrets["recipientEmailAddress"]
+        EMAIL_HOST = secrets["mailserverHost"]
+        EMAIL_PORT = secrets["mailserverPort"]
+        EMAIL_USERNAME = secrets["mailserverUsername"]
+        EMAIL_PASSWORD = secrets["mailserverPassword"]
+
+    # Defaults
+    NUMBER_OF_POSTS_TO_EXAMINE = 3
+    SECONDS_SINCE_LAST_DIGEST = 604800 # 1 week
+
 
     print("--------------------------------------------")
     print("Pulling recent friend activity from Facebook")
@@ -200,8 +212,6 @@ if __name__ == "__main__":
     option.add_argument("--disable-infobars")
     option.add_argument("--disable-extensions")
     option.add_argument("--disable-gpu")
-
-    # Pass the argument 1 to allow and 2 to block
     option.add_experimental_option("prefs", {
         "profile.default_content_setting_values.notifications": 1
     })
@@ -216,16 +226,22 @@ if __name__ == "__main__":
 
     content = "<h1>Posts from Friends</h1>"
 
-    with open('../secrets/fb-digest/friends.csv') as csvfile:
-        readCSV = csv.reader(csvfile, delimiter = ',')
+    # Pull in friend list (see README.md for format)
+    with open(args.friends) as friendsFile:
+        readCSV = csv.reader(friendsFile, delimiter = ',')
         for row in readCSV:
 
             friendId = row[0]
             friendName = row[1]
+            friendProfileURL = friendId
+            if ("http" not in friendId):
+                friendProfileURL = "https://www.facebook.com/" + friendId
 
-            posts = extract(browser, page="https://www.facebook.com/" + friendId, numOfPost = 3)
+            posts = extract(browser, page = friendProfileURL, numberOfPosts = NUMBER_OF_POSTS_TO_EXAMINE)
             if not os.path.exists("output"):
                 os.makedirs("output")
+
+            hasElligiblePost = False
 
             for i in range(len(posts)):
                 poster = posts[i]['Poster']
@@ -244,8 +260,7 @@ if __name__ == "__main__":
                 postTime = float(date)
                 currentTime = time.time()
                 prettyTime = time.ctime(postTime)
-                secondsInAWeek = 604800
-                isRecent = (currentTime - postTime <= secondsInAWeek)
+                isRecent = (currentTime - postTime <= SECONDS_SINCE_LAST_DIGEST)
 
                 isSelfPosted = (friendName == poster)
                 hasOP = ((not originalPoster is None) & (originalPoster != ''))
@@ -275,7 +290,7 @@ if __name__ == "__main__":
                 print("- No recent posts from: " + friendName)
 
             # Keep a copy for reference
-            writeJSON(posts, "output/posts-" + friendId + ".json")
+            #writeJSON(posts, "output/posts-" + friendId + ".json")
 
             # Keep them guessing...
             time.sleep(random.randint(5,30))
